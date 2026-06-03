@@ -30,6 +30,7 @@ def bootstrap_vercel_sqlite() -> None:
     if marker_path.exists():
         return
 
+    call_command("collectstatic", interactive=False, verbosity=0, clear=False)
     call_command("migrate", interactive=False, run_syncdb=True, verbosity=0)
     marker_path.write_text("ok", encoding="utf-8")
 

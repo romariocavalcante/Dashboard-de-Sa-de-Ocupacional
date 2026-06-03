@@ -69,8 +69,11 @@ O projeto está preparado para rodar no Vercel com SQLite em /tmp/db.sqlite3.
 ### Comportamento no Vercel
 
 - No primeiro cold start, a API tenta copiar db.sqlite3 para /tmp
+- Executa collectstatic automaticamente
 - Depois executa migrate automaticamente
 - Enquanto a instância estiver ativa, leitura e escrita funcionam normalmente
+
+Arquivos estáticos (CSS, JS e imagens) são servidos via WhiteNoise em /static.
 
 ### Limitação Importante
 
@@ -87,7 +90,3 @@ Para produção com persistência real, use banco gerenciado (PostgreSQL, MySQL,
 - ALLOWED_HOSTS=.vercel.app
 - CSRF_TRUSTED_ORIGINS=https://*.vercel.app
 - SQLITE_DB_PATH=/tmp/db.sqlite3
-
-## Capturas de Tela
-
-As imagens de captura de tela foram removidas deste repositório.
