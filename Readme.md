@@ -69,11 +69,10 @@ O projeto está preparado para rodar no Vercel com SQLite em /tmp/db.sqlite3.
 ### Comportamento no Vercel
 
 - No primeiro cold start, a API tenta copiar db.sqlite3 para /tmp
-- Executa collectstatic automaticamente
 - Depois executa migrate automaticamente
 - Enquanto a instância estiver ativa, leitura e escrita funcionam normalmente
 
-Arquivos estáticos (CSS, JS e imagens) são servidos via WhiteNoise em /static.
+Arquivos estáticos (CSS, JS e imagens) são servidos via WhiteNoise em /static usando finders no ambiente Vercel.
 
 ### Limitação Importante
 
