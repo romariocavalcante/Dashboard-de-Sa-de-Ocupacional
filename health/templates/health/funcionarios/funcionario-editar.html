@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+{% load static health_extras %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Funcionário</title>
+    <link rel="stylesheet" href="{% static 'health/css/global/global.css' %}">
+    <style>
+        .edit-panel {
+            display: grid;
+            gap: 24px;
+        }
+
+        .edit-card {
+            background: #fff;
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        .form-grid {
+            display: grid;
+            gap: 18px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+
+        .field-group {
+            display: grid;
+            gap: 8px;
+        }
+
+        .field-group label,
+        .section-title {
+            font-weight: 700;
+        }
+
+        .field-group input,
+        .field-group select,
+        .field-group textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+
+        .wide {
+            grid-column: 1 / -1;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subsection {
+            display: grid;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .atestado-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .atestado-row {
+            display: grid;
+            grid-template-columns: 160px 1fr 120px auto;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 760px) {
+            .atestado-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <aside class="sidebar">
+            <header>
+                <div class="brand">Saúde Ocupacional</div>
+            </header>
+            <section>
+                <div class="search">
+                    <input type="text" placeholder="Buscar funcionário...">
+                    <button>Buscar</button>
+                </div>
+                <nav>
+                    <a href="{% url 'health:dashboard' %}">Dashboard</a>
+                    <a href="{% url 'health:funcionarios' %}" class="active">Funcionários</a>
+                    <a href="{% url 'health:relatorios' %}">Relatórios</a>
+                    <a href="{% url 'health:configuracoes' %}">Configurações</a>
+                    <a href="{% url 'health:painel' %}">Painel do Usuário</a>
+                </nav>
+            </section>
+        </aside>
+
+        <aside class="content">
+            <header class="page-header top-bar">
+                <div>
+                    <h2>Editar Funcionário</h2>
+                    <p class="subtitle">Atualize os dados que alimentam as estatísticas do dashboard.</p>
+                </div>
+                <a class="btn btn-view" href="{% url 'health:funcionarios' %}">Voltar</a>
+            </header>
+
+            {% if messages %}
+            <section class="messages">
+                {% for message in messages %}
+                <div class="message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </section>
+            {% endif %}
+
+            <form method="post" class="edit-panel">
+                {% csrf_token %}
+
+                <section class="edit-card">
+                    <h3 class="section-title">Dados básicos</h3>
+                    <div class="form-grid">
+                        <div class="field-group">
+                            <label for="nome">Nome</label>
+                            <input type="text" id="nome" name="nome" value="{{ employee.nome }}" required>
+                        </div>
+                        <div class="field-group">
+                            <label for="cargo">Cargo</label>
+                            <input type="text" id="cargo" name="cargo" value="{{ employee.cargo }}" required>
+                        </div>
+                        <div class="field-group">
+                            <label for="setor">Setor</label>
+                            <input type="text" id="setor" name="setor" value="{{ employee.setor }}" required>
+                        </div>
+                        <div class="field-group">
+                            <label for="status">Status ocupacional</label>
+                            <select id="status" name="status">
+                                {% for value, label in status_options %}
+                                <option value="{{ value }}" {% if employee.saudeOcupacional.status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="edit-card">
+                    <h3 class="section-title">Afastamento INSS</h3>
+                    <div class="form-grid">
+                        <label class="checkbox-row field-group wide">
+                            <input type="checkbox" name="afastamento_ativo" {% if afastamento.ativo %}checked{% endif %}>
+                            <span>Afastamento ativo</span>
+                        </label>
+                        <div class="field-group">
+                            <label for="data_afastamento">Data de afastamento</label>
+                            <input type="date" id="data_afastamento" name="data_afastamento" value="{{ afastamento.dataAfastamento|to_date_input }}">
+                        </div>
+                        <div class="field-group">
+                            <label for="previsao_retorno">Previsão de retorno</label>
+                            <input type="date" id="previsao_retorno" name="previsao_retorno" value="{{ afastamento.previsaoRetorno|to_date_input }}">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="edit-card">
+                    <h3 class="section-title">Exames e acidentes</h3>
+                    <div class="form-grid">
+                        <div class="field-group">
+                            <label for="exame_status">Status do exame</label>
+                            <select id="exame_status" name="exame_status">
+                                {% for value, label in exame_status_options %}
+                                <option value="{{ value }}" {% if exames.status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label for="proximo_periodico">Próximo periódico</label>
+                            <input type="date" id="proximo_periodico" name="proximo_periodico" value="{{ exames.proximoPeriodico|to_date_input }}">
+                        </div>
+                        <label class="checkbox-row field-group wide">
+                            <input type="checkbox" name="exame_realizado_no_mes" {% if exames.realizadoNoMes %}checked{% endif %}>
+                            <span>Exame realizado no mês</span>
+                        </label>
+                        <div class="field-group">
+                            <label for="acidentes_quantidade">Quantidade de acidentes no ano</label>
+                            <input type="number" id="acidentes_quantidade" name="acidentes_quantidade" min="0" value="{{ acidentes.quantidadeAno|default:0 }}">
+                        </div>
+                        <div class="field-group">
+                            <label for="ultimo_tipo">Último tipo de acidente</label>
+                            <input type="text" id="ultimo_tipo" name="ultimo_tipo" value="{{ acidentes.ultimoTipo }}">
+                        </div>
+                        <div class="field-group">
+                            <label for="data_ultimo_acidente">Data do último acidente</label>
+                            <input type="date" id="data_ultimo_acidente" name="data_ultimo_acidente" value="{{ acidentes.dataUltimo|to_date_input }}">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="edit-card">
+                    <h3 class="section-title">Absenteísmo</h3>
+                    <p class="subtitle">Campo calculado automaticamente pelos atestados do mês atual. Não é editável manualmente.</p>
+                    <div class="form-grid">
+                        <div class="field-group">
+                            <label for="taxa_mensal">Taxa mensal</label>
+                            <input type="text" id="taxa_mensal" value="{{ absenteismo.taxaMensal|default:0 }}%" readonly>
+                        </div>
+                        <div class="field-group">
+                            <label for="horas_perdidas_mes">Horas perdidas no mês</label>
+                            <input type="text" id="horas_perdidas_mes" value="{{ absenteismo.horasPerdidasMes|default:0 }}" readonly>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="edit-card">
+                    <div class="top-bar">
+                        <h3 class="section-title">Atestados</h3>
+                        <button class="btn btn-view" type="button" id="addAtestado">Adicionar atestado</button>
+                    </div>
+                    <div class="subsection">
+                        <div class="atestado-list" id="atestadoList">
+                            {% for atestado in atestados %}
+                            <div class="atestado-row">
+                                <div class="field-group">
+                                    <label>Data</label>
+                                    <input type="date" name="atestado_data" value="{{ atestado.data|to_date_input }}" required>
+                                </div>
+                                <div class="field-group">
+                                    <label>CID</label>
+                                    <input type="text" name="atestado_cid" value="{{ atestado.cid }}" required>
+                                </div>
+                                <div class="field-group">
+                                    <label>Dias</label>
+                                    <input type="number" name="atestado_dias" min="1" value="{{ atestado.dias }}" required>
+                                </div>
+                                <div class="row-actions">
+                                    <button class="btn danger remove-atestado" type="button">Remover</button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="edit-card">
+                    <button class="btn btn-view" type="submit">Salvar alterações</button>
+                </section>
+            </form>
+        </aside>
+    </main>
+
+    <template id="atestadoTemplate">
+        <div class="atestado-row">
+            <div class="field-group">
+                <label>Data</label>
+                <input type="date" name="atestado_data" required>
+            </div>
+            <div class="field-group">
+                <label>CID</label>
+                <input type="text" name="atestado_cid" required>
+            </div>
+            <div class="field-group">
+                <label>Dias</label>
+                <input type="number" name="atestado_dias" min="1" required>
+            </div>
+            <div class="row-actions">
+                <button class="btn danger remove-atestado" type="button">Remover</button>
+            </div>
+        </div>
+    </template>
+
+    <script src="{% static 'health/js/global/sidebar-search.js' %}"></script>
+    <script>
+        const addAtestadoButton = document.getElementById("addAtestado");
+        const atestadoList = document.getElementById("atestadoList");
+        const atestadoTemplate = document.getElementById("atestadoTemplate");
+
+        function bindRemoveButtons(scope) {
+            scope.querySelectorAll(".remove-atestado").forEach((button) => {
+                button.addEventListener("click", () => {
+                    const row = button.closest(".atestado-row");
+                    if (row) row.remove();
+                });
+            });
+        }
+
+        if (addAtestadoButton && atestadoTemplate && atestadoList) {
+            addAtestadoButton.addEventListener("click", () => {
+                const fragment = atestadoTemplate.content.cloneNode(true);
+                atestadoList.appendChild(fragment);
+                bindRemoveButtons(atestadoList);
+            });
+        }
+
+        bindRemoveButtons(document);
+    </script>
+</body>
+</html>

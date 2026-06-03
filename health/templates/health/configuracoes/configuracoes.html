@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <title>Configurações</title>
+    <link rel="stylesheet" href="{% static 'health/css/global/global.css' %}">
+    <link rel="stylesheet" href="{% static 'health/css/configuracoes/configuracoes.css' %}">
+</head>
+
+<body>
+    <main class="container">
+        <!-- MENU LATERAL -->
+        <aside class="sidebar">
+            <header>
+                <div class="brand">Saúde Ocupacional</div>
+            </header>
+            <section>
+                <div class="search">
+                    <input type="text" placeholder="Buscar funcionário...">
+                    <button>Buscar</button>
+                </div>
+                <nav>
+                    <a href="{% url 'health:dashboard' %}">Dashboard</a>
+                    <a href="{% url 'health:funcionarios' %}">Funcionários</a>
+                    <a href="{% url 'health:relatorios' %}">Relatórios</a>
+                    <a href="{% url 'health:configuracoes' %}">Configurações</a>
+                    <a href="{% url 'health:painel' %}">Painel do Usuário</a>
+                </nav>
+            </section>
+        </aside>
+        <!-- CONTEÚDO -->
+        <aside class="content">
+            <header class="page-header">
+                <h2>Configurações do Sistema</h2>
+                <p class="page-subtitle">Ajuste regras operacionais e alertas para manter o painel alinhado ao processo da empresa.</p>
+            </header>
+            <section class="settings-toolbar">
+                <button type="button" class="btn btn-view" id="save-all-settings">Salvar tudo</button>
+                <button type="button" class="btn btn-secondary" id="reset-settings">Restaurar padrões</button>
+                <span class="save-feedback" id="save-feedback" aria-live="polite"></span>
+            </section>
+            <!-- REGRAS -->
+            <section class="settings" id="settings-form">
+                <div class="card settings-card" data-card="atestados">
+                    <h3>Regras de Atestados</h3>
+                    <p class="card-description">Defina limites e prioridades para acelerar triagem e auditoria de atestados.</p>
+
+                    <label for="limite-atestados-mes">Limite de atestados por mês</label>
+                    <input id="limite-atestados-mes" name="limite_atestados_mes" type="number" min="0" max="31" value="3" data-default="3" data-setting>
+
+                    <label for="dias-auditoria">Dias para auditoria automática</label>
+                    <input id="dias-auditoria" name="dias_auditoria" type="number" min="1" max="30" value="5" data-default="5" data-setting>
+
+                    <label for="cid-prioritario">CID prioritário para alerta</label>
+                    <input id="cid-prioritario" name="cid_prioritario" type="text" value="M54" maxlength="10" data-default="M54" data-setting>
+
+                    <button type="button" class="btn btn-view btn-save-card">Salvar bloco</button>
+                </div>
+                <div class="card settings-card" data-card="alertas">
+                    <h3>Alertas Ocupacionais</h3>
+                    <p class="card-description">Escolha quais notificações ficam ativas para RH e lideranças.</p>
+
+                    <label class="checkbox-label" for="alerta-inss">
+                        <input id="alerta-inss" name="alerta_inss" type="checkbox" checked data-default="true" data-setting>
+                        Notificar RH sobre afastamentos INSS
+                    </label>
+
+                    <label class="checkbox-label" for="alerta-exame-vencido">
+                        <input id="alerta-exame-vencido" name="alerta_exame_vencido" type="checkbox" checked data-default="true" data-setting>
+                        Notificar gestor sobre exame vencido
+                    </label>
+
+                    <label class="checkbox-label" for="alerta-absenteismo">
+                        <input id="alerta-absenteismo" name="alerta_absenteismo" type="checkbox" data-default="false" data-setting>
+                        Alerta para absenteísmo acima de 5%
+                    </label>
+
+                    <button type="button" class="btn btn-view btn-save-card">Salvar bloco</button>
+                </div>
+                <div class="card settings-card" data-card="exames">
+                    <h3>Exames Periódicos</h3>
+                    <p class="card-description">Controle os prazos de aviso antecipado para evitar vencimentos críticos.</p>
+
+                    <label for="janela-aviso-90">Janela de aviso principal (dias)</label>
+                    <input id="janela-aviso-90" name="janela_aviso_90" type="number" min="1" max="365" value="90" data-default="90" data-setting>
+
+                    <label for="janela-aviso-60">Janela de aviso secundária (dias)</label>
+                    <input id="janela-aviso-60" name="janela_aviso_60" type="number" min="1" max="365" value="60" data-default="60" data-setting>
+
+                    <button type="button" class="btn btn-view btn-save-card">Salvar bloco</button>
+                </div>
+            </section>
+            <div class="settings-toast" id="settings-toast" role="status" aria-live="polite"></div>
+        </aside>
+    </main>
+    <script src="{% static 'health/js/global/sidebar-search.js' %}"></script>
+    <script src="{% static 'health/js/configuracoes/configuracoes.js' %}"></script>
+</body>
+
+</html>

@@ -1,0 +1,61 @@
+.content::after {
+  content: none;
+}
+
+.employees-content-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.employee-page-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #d1d5db;
+  color: #64748b;
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .employee-page-footer {
+    margin-top: 20px;
+  }
+
+  .page-header {
+    text-align: center;
+  }
+  .page-header .search-box input {
+    font-size: 14px;
+    padding: 10px;
+  }
+  .page-header .employee-table {
+    display: block;
+    border: none;
+  }
+  .page-header .employee-table thead {
+    display: none;
+  }
+  .page-header .employee-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .page-header .employee-table tr {
+    background: #fff;
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .page-header .employee-table td {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .page-header .employee-table td:last-child {
+    border-bottom: none;
+  }
+  .page-header .btn-view {
+    width: 100%;
+  }
+}/*# sourceMappingURL=funcionarios.css.map */

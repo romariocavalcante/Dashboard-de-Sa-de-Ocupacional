@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+{% load static health_extras %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Saúde Ocupacional</title>
+    <link rel="stylesheet" href="{% static 'health/css/index/index.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <main class="container">
+        <!-- MENU LATERAL -->
+        <aside class="sidebar">
+            <header>
+                <div class="brand">Saúde Ocupacional</div>
+            </header>
+            <section>
+                <div class="search">
+                    <input type="text" placeholder="Buscar funcionário...">
+                    <button>Buscar</button>
+                </div>
+                <nav>
+                    <a href="{% url 'health:dashboard' %}">Dashboard</a>
+                    <a href="{% url 'health:funcionarios' %}">Funcionários</a>
+                    <a href="{% url 'health:relatorios' %}">Relatórios</a>
+                    <a href="{% url 'health:configuracoes' %}">Configurações</a>
+                    <a href="{% url 'health:painel' %}">Painel do Usuário</a>
+                </nav>
+            </section>
+        </aside>
+        <!-- CONTEÚDO PRINCIPAL -->
+        <aside class="content">
+            <header class="top-header">
+                <div class="user-info">
+                    <span class="user-name">Painel Corporativo</span>
+                    <span class="user-role">Monitoramento de Saúde Ocupacional</span>
+                </div>
+            </header>
+
+            <section class="module-tabs" id="moduleTabs">
+                {% for module in dashboard_modules %}
+                <button class="module-tab {% if module.key == active_module_key %}is-active{% endif %}" data-module-target="{{ module.key }}">
+                    {{ module.title }}
+                </button>
+                {% endfor %}
+            </section>
+
+            <section class="module-panels" id="modulePanels">
+                {% for module in dashboard_modules %}
+                <article class="module-panel {% if module.key == active_module_key %}is-active{% endif %}" data-module-panel="{{ module.key }}">
+                    <header class="module-header">
+                        <h3>{{ module.title }}</h3>
+                        <p>{{ module.description }}</p>
+                    </header>
+
+                    {% if module.key == 'executive' %}
+                    <section class="cards-resume">
+                        <div class="card">
+                            <h3>Atestados Cadastrados</h3>
+                            <p id="monthCertificates">{{ dashboard_stats.month_certificates }}</p>
+                        </div>
+                        <div class="card">
+                            <h3>Afastados INSS</h3>
+                            <p id="inssActive">{{ dashboard_stats.inss_active }}</p>
+                        </div>
+                        <div class="card">
+                            <h3>Exames Vencidos</h3>
+                            <p id="expiredExams" class="high">{{ dashboard_stats.expired_exams }}</p>
+                        </div>
+                        <div class="card alert">
+                            <h3>Alerta</h3>
+                            <p id="alert">{{ dashboard_stats.alert_text }}</p>
+                        </div>
+                    </section>
+                    {% endif %}
+
+                    <section class="module-metrics">
+                        {% for metric in module.metrics %}
+                        <div class="metric-card">
+                            <h4>{{ metric.label }}</h4>
+                            {% if metric.table_rows %}
+                            <div class="metric-table-wrap">
+                                <table class="metric-table">
+                                    <thead>
+                                        <tr>
+                                            {% for header in metric.table_headers %}
+                                            <th>{{ header }}</th>
+                                            {% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in metric.table_rows %}
+                                        <tr>
+                                            {% for key in metric.table_keys %}
+                                            <td>{{ row|get_item:key }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <p>{{ metric.value }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </section>
+
+                    {% if module.key == 'executive' %}
+                    <section class="dashboard-extra">
+                        <div class="chart-card">
+                            <h3>Atestados por Mês (Ano Atual)</h3>
+                            <canvas id="certificatesChart"></canvas>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Acidentes por Tipo</h3>
+                            <canvas id="accidentsChart"></canvas>
+                        </div>
+                        <div class="indicators">
+                            <div class="indicator">
+                                <h4>Absenteísmo Médio</h4>
+                                <p id="absenteeismRate">{{ dashboard_stats.absenteeism_rate }}%</p>
+                            </div>
+                            <div class="indicator">
+                                <h4>Exames vencem em 60 dias</h4>
+                                <p id="exams60">{{ dashboard_stats.exams60 }}</p>
+                            </div>
+                            <div class="indicator">
+                                <h4>Exames vencem em 90 dias</h4>
+                                <p id="exams90">{{ dashboard_stats.exams90 }}</p>
+                            </div>
+                            <div class="indicator risk">
+                                <h4>Top colaborador em atestados</h4>
+                                <p id="topEmployee">{{ dashboard_stats.top_employee.nome }} ({{ dashboard_stats.top_employee.total }})</p>
+                            </div>
+                        </div>
+                    </section>
+                    {% endif %}
+                </article>
+                {% endfor %}
+            </section>
+        </aside>
+    </main>
+    <script src="{% static 'health/js/global/sidebar-search.js' %}"></script>
+    {{ employees_payloads|json_script:"employees-data" }}
+    {{ dashboard_stats|json_script:"dashboard-stats" }}
+    <script>
+        const employees = JSON.parse(document.getElementById("employees-data").textContent);
+        const dashboardStats = JSON.parse(document.getElementById("dashboard-stats").textContent);
+    </script>
+    <script src="{% static 'health/js/index/index.js' %}"></script>
+</body>
+</html>

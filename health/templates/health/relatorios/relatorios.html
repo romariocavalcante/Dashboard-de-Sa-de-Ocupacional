@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <title>Relatórios</title>
+    <link rel="stylesheet" href="{% static 'health/css/global/global.css' %}">
+    <link rel="stylesheet" href="{% static 'health/css/relatorios/relatorios.css' %}">
+</head>
+<body>
+    <main class="container">
+       <!-- MENU LATERAL -->
+        <aside class="sidebar">
+            <header>
+                <div class="brand">Saúde Ocupacional</div>
+            </header>
+            <section>
+                <div class="search">
+                    <input type="text" placeholder="Buscar funcionário...">
+                    <button>Buscar</button>
+                </div>
+                <nav>
+                    <a href="{% url 'health:dashboard' %}">Dashboard</a>
+                    <a href="{% url 'health:funcionarios' %}">Funcionários</a>
+                    <a href="{% url 'health:relatorios' %}">Relatórios</a>
+                    <a href="{% url 'health:configuracoes' %}">Configurações</a>
+                    <a href="{% url 'health:painel' %}">Painel do Usuário</a>
+                </nav>
+            </section>
+        </aside>
+        <!-- CONTEÚDO -->
+        <aside class="content">
+            <header class="page-header">
+                <h2>Relatórios de Saúde Ocupacional</h2>
+            </header>
+            <!-- FILTROS -->
+            <section class="filters">
+                <select id="cidFilter">
+                    <option value="">Todos os CID</option>
+                </select>
+                <select id="monthFilter">
+                    <option value="">Todos os meses</option>
+                </select>
+                <select id="yearFilter">
+                    <option value="">Todos os anos</option>
+                </select>
+                <button class="btn btn-view" id="generateReport">Aplicar Filtros</button>
+            </section>
+            <!-- RESUMO -->
+            <section class="cards-resume">
+                <div class="card">
+                    <h3>Atestados Filtrados</h3>
+                    <p id="totalCertificates">0</p>
+                </div>
+                <div class="card">
+                    <h3>Afastados INSS</h3>
+                    <p id="activeInss">0</p>
+                </div>
+                <div class="card">
+                    <h3>Taxa Média de Absenteísmo</h3>
+                    <p id="avgAbsenteeism">0%</p>
+                </div>
+                <div class="card">
+                    <h3>Acidentes no Ano</h3>
+                    <p id="accidentsTotal">0</p>
+                </div>
+            </section>
+            <!-- GRÁFICO -->
+            <section class="charts">
+                <div class="chart-card">
+                    <h3>Ranking de Colaboradores com Mais Atestados</h3>
+                    <canvas id="reportChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Afastamentos INSS Ativos</h3>
+                    <table class="employee-table">
+                        <thead>
+                            <tr>
+                                <th>Colaborador</th>
+                                <th>Data de afastamento</th>
+                                <th>Previsão de retorno</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inssTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </aside>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static 'health/js/global/sidebar-search.js' %}"></script>
+    {{ employees_payloads|json_script:"employees-data" }}
+    <script>
+        const employees = JSON.parse(document.getElementById("employees-data").textContent);
+    </script>
+    <script src="{% static 'health/js/relatorios/relatorios.js' %}"></script>
+</body>
+</html>

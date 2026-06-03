@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Saúde Ocupacional</title>
+    <link rel="stylesheet" href="{% static 'health/css/global/global.css' %}">
+    <style>
+        .login-wrap {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .login-card {
+            width: min(420px, 100%);
+            background: #fff;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 12px 32px rgba(17, 24, 39, 0.08);
+        }
+        .login-card h1 {
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .login-card p {
+            margin-bottom: 18px;
+            color: #4b5563;
+        }
+        .login-card label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        .login-card input {
+            width: 100%;
+            margin-bottom: 14px;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+        }
+        .login-card button {
+            width: 100%;
+            padding: 11px;
+            border: 0;
+            background: #2563eb;
+            color: #fff;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .errorlist {
+            list-style: none;
+            margin-bottom: 10px;
+            color: #991b1b;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <main class="login-wrap">
+        <section class="login-card">
+            <h1>Saúde Ocupacional</h1>
+            <p>Entre com seu usuário para acessar o painel.</p>
+            <form method="post">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+                <label for="id_username">Usuário</label>
+                {{ form.username }}
+                <label for="id_password">Senha</label>
+                {{ form.password }}
+                <button type="submit">Entrar</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

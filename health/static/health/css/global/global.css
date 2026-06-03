@@ -1,0 +1,353 @@
+@charset "UTF-8";
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: #f4f6f8;
+  overflow: hidden;
+}
+
+.container {
+  display: flex;
+  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 260px;
+  height: 100vh;
+  max-height: 100vh;
+  background: linear-gradient(180deg, #1f2933, #111827);
+  color: #fff;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  flex-shrink: 0;
+  /* ===== HEADER ===== */
+  /* ===== CONTEÚDO ===== */
+}
+.sidebar header .brand {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.sidebar section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  /* ===== SEARCH ===== */
+  /* ===== NAV ===== */
+}
+.sidebar section .search {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 6px;
+  background: #ffffff;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+}
+.sidebar section .search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  padding: 10px 12px;
+  font-size: 14px;
+  background: transparent;
+  color: #111827;
+}
+.sidebar section .search input::-moz-placeholder {
+  color: #9ca3af;
+}
+.sidebar section .search input::placeholder {
+  color: #9ca3af;
+}
+.sidebar section .search input:focus {
+  outline: none;
+}
+.sidebar section .search button {
+  flex-shrink: 0;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 9px 14px;
+  font-size: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease;
+}
+.sidebar section .search button:hover {
+  background: #1e40af;
+}
+.sidebar section .search:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+.sidebar section nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sidebar section nav a {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 10px;
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.25s ease;
+}
+.sidebar section nav a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  transform: translateX(4px);
+}
+.sidebar section nav a.active {
+  background: rgba(37, 99, 235, 0.2);
+  color: #fff;
+  font-weight: 600;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.content::after {
+  content: "© Romário Cavalcante 2026 - Todos os direitos reservados.";
+  display: block;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #d1d5db;
+  color: #64748b;
+  font-size: 13px;
+  text-align: center;
+}
+.content .top-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+.content .top-header .user-info {
+  text-align: right;
+}
+.content .top-header .user-info .user-name {
+  font-weight: bold;
+  display: block;
+}
+.content .cards-resume {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+.content .cards-resume .card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+}
+.content .cards-resume .card h3 {
+  margin-bottom: 10px;
+}
+.content .alert {
+  background: #fff3cd;
+}
+
+.low {
+  color: green;
+}
+
+.medium {
+  color: orange;
+}
+
+.high {
+  color: red;
+}
+
+.dashboard-extra {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.chart-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+}
+.chart-card canvas {
+  max-height: 250px;
+}
+
+.indicators {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+}
+
+.indicator {
+  background: #fff;
+  padding: 15px;
+  border-radius: 8px;
+}
+.indicator h4 {
+  margin-bottom: 8px;
+}
+
+.risk {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.page-header {
+  margin-bottom: 20px;
+}
+
+.search-box {
+  margin-bottom: 15px;
+}
+.search-box input {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+}
+
+.employee-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+.employee-table th,
+.employee-table td {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+.employee-table th {
+  background: #f9fafb;
+}
+
+.status {
+  font-weight: bold;
+}
+.status.low {
+  color: green;
+}
+.status.medium {
+  color: orange;
+}
+.status.high {
+  color: red;
+}
+
+.btn {
+  padding: 6px 10px;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.btn-view {
+  background: #2563eb;
+  color: white;
+}
+
+@media (max-width: 600px) {
+  .search {
+    max-width: 100%;
+  }
+  .search button {
+    padding: 10px;
+  }
+}
+@media (max-width: 768px) {
+  body {
+    overflow: auto;
+  }
+  .container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+  .sidebar {
+    width: 100%;
+    height: auto;
+    max-height: none;
+    padding: 15px;
+    border-radius: 0;
+    overflow: visible;
+  }
+  .sidebar header {
+    text-align: center;
+  }
+  .sidebar header .brand {
+    margin-bottom: 12px;
+  }
+  .sidebar section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .sidebar .search {
+    width: 100%;
+  }
+  .sidebar .search input {
+    font-size: 14px;
+  }
+  .sidebar .search button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .sidebar nav {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+  }
+  .sidebar nav a {
+    margin: 6px 8px;
+    font-size: 14px;
+  }
+  .content {
+    padding: 15px;
+    height: auto;
+    overflow: visible;
+  }
+  .top-header {
+    justify-content: center;
+    text-align: center;
+  }
+  .cards-resume {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-extra {
+    grid-template-columns: 1fr;
+  }
+  .indicators {
+    grid-template-columns: 1fr;
+    grid-column: auto;
+  }
+}/*# sourceMappingURL=global.css.map */

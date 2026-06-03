@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+{% load static health_extras %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Usuário</title>
+    <link rel="stylesheet" href="{% static 'health/css/global/global.css' %}">
+    <link rel="stylesheet" href="{% static 'health/css/painel/painel.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+</head>
+<body>
+    <main class="container">
+        <aside class="sidebar">
+            <header>
+                <div class="brand">Saúde Ocupacional</div>
+            </header>
+            <section>
+                <div class="search">
+                    <input type="text" placeholder="Buscar funcionário...">
+                    <button>Buscar</button>
+                </div>
+                <nav>
+                    <a href="{% url 'health:dashboard' %}">Dashboard</a>
+                    <a href="{% url 'health:funcionarios' %}">Funcionários</a>
+                    <a href="{% url 'health:relatorios' %}">Relatórios</a>
+                    <a href="{% url 'health:configuracoes' %}">Configurações</a>
+                    <a href="{% url 'health:painel' %}" class="active">Painel do Usuário</a>
+                </nav>
+            </section>
+        </aside>
+
+        <aside class="content">
+            <header class="page-header painel-header">
+                <div>
+                    <h2>Painel do Usuário</h2>
+                    <p class="subtitle">
+                        Perfil: {% if is_admin %}Administrador{% else %}Usuário comum{% endif %}
+                    </p>
+                </div>
+                <form method="post" action="{% url 'health:logout' %}">
+                    {% csrf_token %}
+                    <button class="btn btn-view" type="submit">Sair</button>
+                </form>
+            </header>
+
+            {% if messages %}
+            <section class="messages">
+                {% for message in messages %}
+                <div class="message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </section>
+            {% endif %}
+
+            <section class="layout-controls">
+                <button class="btn {% if layout.modo_visualizacao == 'cards' %}btn-view{% endif %}" data-view-mode="cards">Modo Cards</button>
+                <button class="btn {% if layout.modo_visualizacao == 'grid' %}btn-view{% endif %}" data-view-mode="grid">Modo Grade</button>
+            </section>
+
+            <section id="cardVisibilityManager" class="cards-only card-visibility-manager {% if layout.modo_visualizacao != 'cards' %}is-hidden{% endif %}">
+                <h3>Cards visíveis no dashboard</h3>
+                <div class="visibility-list">
+                    {% for item in ordered_items %}
+                    <button
+                        type="button"
+                        class="btn visibility-toggle {% if item.id in hidden_item_ids %}is-hidden-card{% endif %}"
+                        data-toggle-item-id="{{ item.id }}"
+                    >
+                        {% if item.id in hidden_item_ids %}Adicionar{% else %}Remover{% endif %} - {{ item.nome }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="dashboard-readonly-note">
+                <p>
+                    Os indicadores da tela inicial são somente leitura e são calculados a partir dos dados dos funcionários.
+                    Use a área de funcionários para editar as informações de origem.
+                </p>
+            </section>
+
+            <section id="dashboardContainer" class="dashboard-layout {{ layout.modo_visualizacao }}">
+                {% for item in ordered_items %}
+                <article class="item-card {% if item.id in hidden_item_ids %}user-hidden{% endif %}" data-item-id="{{ item.id }}">
+                    <header class="item-card-header">
+                        <h3>{{ item.nome }}</h3>
+                        {% if is_admin %}
+                        <form method="post" action="{% url 'health:renomear-item' item.id %}" class="inline-form">
+                            {% csrf_token %}
+                            <input type="text" name="nome" value="{{ item.nome }}" required>
+                            <button class="btn" type="submit">Renomear item</button>
+                        </form>
+                        {% endif %}
+                    </header>
+
+                    {% for campo in item.campos.all %}
+                    <section class="field-box">
+                        <div class="field-title-row">
+                            <h4>{{ campo.nome }}</h4>
+                            {% if is_admin %}
+                            <form method="post" action="{% url 'health:renomear-campo' campo.id %}" class="inline-form">
+                                {% csrf_token %}
+                                <input type="text" name="nome" value="{{ campo.nome }}" required>
+                                <button class="btn" type="submit">Renomear campo</button>
+                            </form>
+                            {% endif %}
+                        </div>
+
+                    </section>
+                    {% endfor %}
+                </article>
+                {% endfor %}
+            </section>
+        </aside>
+    </main>
+
+    <script src="{% static 'health/js/global/sidebar-search.js' %}"></script>
+    <script src="{% static 'health/js/painel/painel.js' %}"></script>
+</body>
+</html>
