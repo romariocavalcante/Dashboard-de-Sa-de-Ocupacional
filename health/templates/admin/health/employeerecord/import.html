@@ -1,0 +1,22 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <fieldset class="module aligned">
+            <div class="form-row">
+                {{ form.planilha.label_tag }}
+                {{ form.planilha }}
+            </div>
+            <div class="form-row">
+                {{ form.use_default }}
+                <label for="id_use_default">Importar planilha da pasta data-js</label>
+            </div>
+        </fieldset>
+        <div class="submit-row">
+            <input type="submit" class="default" value="Importar">
+            <a href=".." class="button">Cancelar</a>
+        </div>
+    </form>
+{% endblock %}

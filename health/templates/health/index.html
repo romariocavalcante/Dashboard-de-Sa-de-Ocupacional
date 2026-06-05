@@ -35,112 +35,128 @@
         <aside class="content">
             <header class="top-header">
                 <div class="user-info">
-                    <span class="user-name">Painel Corporativo</span>
-                    <span class="user-role">Monitoramento de Saúde Ocupacional</span>
+                    <span class="user-name">Dashboard Atestados e ASO</span>
+                    <span class="user-role">Controle de Absenteismo | 30.03 a 28.05.2026</span>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-view" type="button">Imprimir</button>
                 </div>
             </header>
 
-            <section class="module-tabs" id="moduleTabs">
-                {% for module in dashboard_modules %}
-                <button class="module-tab {% if module.key == active_module_key %}is-active{% endif %}" data-module-target="{{ module.key }}">
-                    {{ module.title }}
-                </button>
-                {% endfor %}
-            </section>
+            <section class="dashboard-shell">
+                <aside class="filters-panel">
+                    <h3>Filtros</h3>
+                    <label class="filter-control">
+                        <span>Ano</span>
+                        <select id="filterYear">
+                            <option value="">Todos</option>
+                        </select>
+                    </label>
+                    <label class="filter-control">
+                        <span>Mes</span>
+                        <select id="filterMonth">
+                            <option value="">Todos</option>
+                        </select>
+                    </label>
+                    <label class="filter-control">
+                        <span>Funcionario</span>
+                        <select id="filterEmployee">
+                            <option value="">Todos</option>
+                        </select>
+                    </label>
+                    <label class="filter-control">
+                        <span>CID</span>
+                        <select id="filterCid">
+                            <option value="">Todos</option>
+                        </select>
+                    </label>
+                    <label class="filter-control">
+                        <span>Area</span>
+                        <select id="filterArea">
+                            <option value="">Todos</option>
+                        </select>
+                    </label>
+                </aside>
 
-            <section class="module-panels" id="modulePanels">
-                {% for module in dashboard_modules %}
-                <article class="module-panel {% if module.key == active_module_key %}is-active{% endif %}" data-module-panel="{{ module.key }}">
-                    <header class="module-header">
-                        <h3>{{ module.title }}</h3>
-                        <p>{{ module.description }}</p>
-                    </header>
-
-                    {% if module.key == 'executive' %}
-                    <section class="cards-resume">
-                        <div class="card">
-                            <h3>Atestados Cadastrados</h3>
-                            <p id="monthCertificates">{{ dashboard_stats.month_certificates }}</p>
-                        </div>
-                        <div class="card">
-                            <h3>Afastados INSS</h3>
-                            <p id="inssActive">{{ dashboard_stats.inss_active }}</p>
-                        </div>
-                        <div class="card">
-                            <h3>Exames Vencidos</h3>
-                            <p id="expiredExams" class="high">{{ dashboard_stats.expired_exams }}</p>
-                        </div>
-                        <div class="card alert">
-                            <h3>Alerta</h3>
-                            <p id="alert">{{ dashboard_stats.alert_text }}</p>
-                        </div>
-                    </section>
-                    {% endif %}
-
-                    <section class="module-metrics">
-                        {% for metric in module.metrics %}
-                        <div class="metric-card">
-                            <h4>{{ metric.label }}</h4>
-                            {% if metric.table_rows %}
-                            <div class="metric-table-wrap">
-                                <table class="metric-table">
-                                    <thead>
-                                        <tr>
-                                            {% for header in metric.table_headers %}
-                                            <th>{{ header }}</th>
-                                            {% endfor %}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for row in metric.table_rows %}
-                                        <tr>
-                                            {% for key in metric.table_keys %}
-                                            <td>{{ row|get_item:key }}</td>
-                                            {% endfor %}
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                            {% else %}
-                            <p>{{ metric.value }}</p>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
+                <section class="dashboard-main">
+                    <section class="kpi-row">
+                        <article class="kpi-card card-animate">
+                            <h4>Qtd de Atestados</h4>
+                            <p id="totalAtestados">0</p>
+                        </article>
+                        <article class="kpi-card card-animate">
+                            <h4>Qtd de dias afastados</h4>
+                            <p id="totalDias">0</p>
+                        </article>
+                        <article class="kpi-card card-animate">
+                            <h4>Horas afastadas</h4>
+                            <p id="totalHoras">0:00:00</p>
+                        </article>
                     </section>
 
-                    {% if module.key == 'executive' %}
-                    <section class="dashboard-extra">
-                        <div class="chart-card">
-                            <h3>Atestados por Mês (Ano Atual)</h3>
-                            <canvas id="certificatesChart"></canvas>
-                        </div>
-                        <div class="chart-card">
-                            <h3>Acidentes por Tipo</h3>
-                            <canvas id="accidentsChart"></canvas>
-                        </div>
-                        <div class="indicators">
-                            <div class="indicator">
-                                <h4>Absenteísmo Médio</h4>
-                                <p id="absenteeismRate">{{ dashboard_stats.absenteeism_rate }}%</p>
-                            </div>
-                            <div class="indicator">
-                                <h4>Exames vencem em 60 dias</h4>
-                                <p id="exams60">{{ dashboard_stats.exams60 }}</p>
-                            </div>
-                            <div class="indicator">
-                                <h4>Exames vencem em 90 dias</h4>
-                                <p id="exams90">{{ dashboard_stats.exams90 }}</p>
-                            </div>
-                            <div class="indicator risk">
-                                <h4>Top colaborador em atestados</h4>
-                                <p id="topEmployee">{{ dashboard_stats.top_employee.nome }} ({{ dashboard_stats.top_employee.total }})</p>
-                            </div>
-                        </div>
+                    <section class="kpi-row aso-row">
+                        <article class="kpi-card card-animate">
+                            <h4>Total de ASOs</h4>
+                            <p id="asosTotal">0</p>
+                        </article>
+                        <article class="kpi-card card-animate">
+                            <h4>ASOs proximos a vencer</h4>
+                            <p id="asosProximos">0</p>
+                        </article>
+                        <article class="kpi-card card-animate">
+                            <h4>ASOs no prazo</h4>
+                            <p id="asosNoPrazo">0</p>
+                        </article>
+                        <article class="kpi-card card-animate">
+                            <h4>% ASOs no prazo</h4>
+                            <p id="asosPercent">0%</p>
+                        </article>
                     </section>
-                    {% endif %}
-                </article>
-                {% endfor %}
+
+                    <section class="chart-grid">
+                        <article class="chart-card wide card-animate">
+                            <header>
+                                <h3>Qtd de Atestados por Mes</h3>
+                                <span>Base planilha de absenteismo</span>
+                            </header>
+                            <canvas id="atestadosMesChart"></canvas>
+                        </article>
+                        <article class="chart-card card-animate">
+                            <header>
+                                <h3>Qtd de Atestados por Tipo</h3>
+                                <span>Motivo de afastamento</span>
+                            </header>
+                            <canvas id="atestadosTipoChart"></canvas>
+                        </article>
+                    </section>
+
+                    <section class="chart-grid">
+                        <article class="chart-card card-animate">
+                            <header>
+                                <h3>Qtd de Atestados por Area</h3>
+                                <span>UMCA e UMGE</span>
+                            </header>
+                            <canvas id="atestadosAreaChart"></canvas>
+                        </article>
+                        <article class="chart-card card-animate">
+                            <header>
+                                <h3>Qtd de Atestados por CID</h3>
+                                <span>Top ocorrencias</span>
+                            </header>
+                            <canvas id="atestadosCidChart"></canvas>
+                        </article>
+                    </section>
+
+                    <section class="chart-grid">
+                        <article class="chart-card wide card-animate">
+                            <header>
+                                <h3>Funcionarios com mais de 3 atestados</h3>
+                                <span>Ranking por colaborador</span>
+                            </header>
+                            <canvas id="topFuncionariosChart"></canvas>
+                        </article>
+                    </section>
+                </section>
             </section>
         </aside>
     </main>
@@ -148,8 +164,8 @@
     {{ employees_payloads|json_script:"employees-data" }}
     {{ dashboard_stats|json_script:"dashboard-stats" }}
     <script>
-        const employees = JSON.parse(document.getElementById("employees-data").textContent);
-        const dashboardStats = JSON.parse(document.getElementById("dashboard-stats").textContent);
+        window.employees = JSON.parse(document.getElementById("employees-data").textContent);
+        window.dashboardStats = JSON.parse(document.getElementById("dashboard-stats").textContent);
     </script>
     <script src="{% static 'health/js/index/index.js' %}"></script>
 </body>

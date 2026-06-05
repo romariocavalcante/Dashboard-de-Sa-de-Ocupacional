@@ -4,7 +4,7 @@ const id = Number(params.get("id"))
 const emp = employees.find(e => e.id === id)
 
 if (!emp) {
-    window.location.href = "funcionarios.html"
+    window.location.href = "/funcionarios/"
 }
 
 const content = document.getElementById("content")
@@ -28,36 +28,86 @@ function normalizeExamStatus(status) {
     return labels[status] || "Não informado"
 }
 
+function displayValue(value, fallback = "-") {
+    if (value === null || value === undefined) return fallback
+    const text = String(value).trim()
+    return text ? text : fallback
+}
+
+function renderAtestadosList(atestados) {
+    if (!Array.isArray(atestados) || atestados.length === 0) {
+        return "<p class=\"subtitle\">Sem atestados registrados.</p>"
+    }
+
+    const rows = atestados.map((atestado) => {
+        return `
+            <tr>
+                <td>${displayValue(atestado.data)}</td>
+                <td>${displayValue(atestado.cid)}</td>
+                <td>${displayValue(atestado.dias, "0")}</td>
+                <td>${displayValue(atestado.motivo)}</td>
+                <td>${displayValue(atestado.area)}</td>
+            </tr>
+        `
+    }).join("")
+
+    return `
+        <table class="employee-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>CID</th>
+                    <th>Dias</th>
+                    <th>Motivo</th>
+                    <th>Area</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>
+    `
+}
+
 content.innerHTML = `
     <header class="page-header">
         <h2>${emp.nome}</h2>
-        <span>${emp.cargo}</span>
+        <span>${emp.funcao}</span>
     </header>
 
     ${canEditEmployees ? `<div class="top-bar"><a class="btn btn-view" href="/funcionarios/${emp.id}/editar/">Editar funcionário</a></div>` : ""}
 
-    <div class="employee-summary">
-        <div class="summary-card">
-            <h4>Setor</h4>
-            <p>${emp.setor}</p>
+    <section class="chart-card">
+        <h3>Dados do funcionario</h3>
+        <div class="employee-details">
+            <div class="detail-row"><span>Chapa</span><strong>${displayValue(emp.chapa)}</strong></div>
+            <div class="detail-row"><span>Nome</span><strong>${displayValue(emp.nome)}</strong></div>
+            <div class="detail-row"><span>Funcao</span><strong>${displayValue(emp.funcao)}</strong></div>
+            <div class="detail-row"><span>Secao</span><strong>${displayValue(emp.secao)}</strong></div>
+            <div class="detail-row"><span>Dt inicio</span><strong>${displayValue(emp.dt_inicio)}</strong></div>
+            <div class="detail-row"><span>Dt final</span><strong>${displayValue(emp.dt_final)}</strong></div>
+            <div class="detail-row"><span>Dias afastados</span><strong>${displayValue(emp.dias_afastados, "0")}</strong></div>
+            <div class="detail-row"><span>Motivo</span><strong>${displayValue(emp.motivo)}</strong></div>
+            <div class="detail-row"><span>CID</span><strong>${displayValue(emp.cid)}</strong></div>
+            <div class="detail-row"><span>Qtd atestados</span><strong>${displayValue(emp.qtd_atestados, "0")}</strong></div>
         </div>
+    </section>
 
-        <div class="summary-card">
-            <h4>Status Ocupacional</h4>
-            <p class="status ${emp.saudeOcupacional.status}">
+    <div class="employee-metrics">
+        <div class="metric-pill">
+            <span>Status</span>
+            <strong class="status ${emp.saudeOcupacional.status}">
                 ${emp.saudeOcupacional.status === "low" ? "Estável" :
                   emp.saudeOcupacional.status === "medium" ? "Atenção" : "Crítico"}
-            </p>
+            </strong>
         </div>
-
-        <div class="summary-card">
-            <h4>Total de Atestados (ano)</h4>
-            <p>${emp.saudeOcupacional.atestados.length}</p>
+        <div class="metric-pill">
+            <span>Atestados (ano)</span>
+            <strong>${emp.saudeOcupacional.atestados.length}</strong>
         </div>
-
-        <div class="summary-card">
-            <h4>Absenteísmo Mensal</h4>
-            <p>${emp.saudeOcupacional.absenteismo.taxaMensal.toFixed(1)}%</p>
+        <div class="metric-pill">
+            <span>Absenteísmo mensal</span>
+            <strong>${emp.saudeOcupacional.absenteismo.taxaMensal.toFixed(1)}%</strong>
         </div>
     </div>
 
@@ -87,7 +137,14 @@ content.innerHTML = `
 
     <div class="chart-card">
         <h3>Atestados por mês</h3>
-        <canvas id="employeeCertificatesChart"></canvas>
+        <div class="chart-compact">
+            <canvas id="employeeCertificatesChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <h3>Atestados detalhados</h3>
+        ${renderAtestadosList(emp.saudeOcupacional.atestados)}
     </div>
 `
 
@@ -116,9 +173,16 @@ new Chart(certificatesCtx, {
     },
     options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
             legend: {
                 display: false
+            }
+        },
+        layout: {
+            padding: {
+                top: 4,
+                bottom: 4
             }
         },
         scales: {

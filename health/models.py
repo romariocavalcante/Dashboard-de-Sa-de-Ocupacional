@@ -57,12 +57,36 @@ class EmployeeRecord(models.Model):
 		return self.payload.get("nome", "")
 
 	@property
-	def cargo(self):
-		return self.payload.get("cargo", "")
+	def funcao(self):
+		return self.payload.get("funcao") or self.payload.get("cargo", "")
 
 	@property
-	def setor(self):
-		return self.payload.get("setor", "")
+	def secao(self):
+		return self.payload.get("secao") or self.payload.get("setor", "")
+
+	@property
+	def dt_inicio(self):
+		return self.payload.get("dt_inicio")
+
+	@property
+	def dt_final(self):
+		return self.payload.get("dt_final")
+
+	@property
+	def dias_afastados(self):
+		return self.payload.get("dias_afastados")
+
+	@property
+	def motivo(self):
+		return self.payload.get("motivo")
+
+	@property
+	def cid(self):
+		return self.payload.get("cid")
+
+	@property
+	def qtd_atestados(self):
+		return self.payload.get("qtd_atestados")
 
 
 class UserDashboardLayout(models.Model):

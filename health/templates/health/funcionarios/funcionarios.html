@@ -35,18 +35,46 @@
             <div class="employees-content-body">
                 <header class="page-header">
                     <h2>Funcionários</h2>
+                    {% if is_admin %}
+                    <div class="employee-actions">
+                        <form class="employee-add-form" method="post" action="{% url 'health:adicionar-funcionario' %}">
+                            {% csrf_token %}
+                            <input type="text" name="nome" placeholder="Nome" required>
+                            <select name="funcao" id="cargoSelect">
+                                <option value="">Selecione a funcao</option>
+                            </select>
+                            <select name="status" id="statusSelect">
+                                <option value="low">Estavel</option>
+                                <option value="medium">Atencao</option>
+                                <option value="high">Critico</option>
+                            </select>
+                            <button class="btn btn-view" type="submit">Adicionar</button>
+                        </form>
+                        <form class="employee-import-form" method="post" action="{% url 'health:importar-funcionarios-planilha' %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'health:funcionarios' %}">
+                            <input type="file" name="planilha" accept=".xlsx,.xls,.ods,.csv" required>
+                            <button class="btn" type="submit">Importar planilha</button>
+                        </form>
+                        <form class="employee-import-form" method="post" action="{% url 'health:importar-funcionarios-planilha' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'health:funcionarios' %}">
+                            <input type="hidden" name="use_default" value="1">
+                            <button class="btn" type="submit">Importar planilha (data-js)</button>
+                        </form>
+                    </div>
+                    {% endif %}
                 </header>
                 <!-- PESQUISA -->
                 <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="Buscar por nome, cargo ou setor...">
+                    <input type="text" id="searchInput" placeholder="Buscar por nome ou funcao...">
                 </div>
                 <!-- LISTA -->
                 <table class="employee-table">
                     <thead>
                         <tr>
                             <th>Nome</th>
-                            <th>Cargo</th>
-                            <th>Setor</th>
+                            <th>Funcao</th>
                             <th>Status Ocupacional</th>
                             <th>Ações</th>
                         </tr>

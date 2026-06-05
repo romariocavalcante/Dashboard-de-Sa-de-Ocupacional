@@ -69,7 +69,7 @@
 
                     <label class="checkbox-label" for="alerta-exame-vencido">
                         <input id="alerta-exame-vencido" name="alerta_exame_vencido" type="checkbox" checked data-default="true" data-setting>
-                        Notificar gestor sobre exame vencido
+                        Notificar gestor sobre ASO proximo a vencer
                     </label>
 
                     <label class="checkbox-label" for="alerta-absenteismo">
@@ -90,6 +90,45 @@
                     <input id="janela-aviso-60" name="janela_aviso_60" type="number" min="1" max="365" value="60" data-default="60" data-setting>
 
                     <button type="button" class="btn btn-view btn-save-card">Salvar bloco</button>
+                </div>
+                <div class="card settings-card" data-card="opcoes">
+                    <h3>Opções de Cadastro</h3>
+                    <p class="card-description">Gerencie as opções exibidas para cargo e status ocupacional.</p>
+
+                    <div class="option-tabs" role="tablist">
+                        <button type="button" class="option-tab is-active" data-option-tab="cargos" role="tab">Cargos</button>
+                        <button type="button" class="option-tab" data-option-tab="status" role="tab">Status ocupacional</button>
+                    </div>
+
+                    <div class="option-panels">
+                        <div class="option-panel is-active" data-option-panel="cargos" role="tabpanel">
+                            <div class="option-manager" data-option-group="cargos">
+                                <div class="option-header">
+                                    <h4>Cargos</h4>
+                                    <div class="option-actions">
+                                        <input type="text" id="cargo-option-input" placeholder="Novo cargo">
+                                        <button type="button" class="btn btn-view" data-add-option="cargos">Adicionar</button>
+                                    </div>
+                                </div>
+                                <div class="option-list" id="cargo-option-list"></div>
+                            </div>
+                        </div>
+
+                        <div class="option-panel" data-option-panel="status" role="tabpanel">
+                            <div class="option-manager" data-option-group="status">
+                                <div class="option-header">
+                                    <h4>Status ocupacional</h4>
+                                    <div class="option-actions">
+                                        <input type="text" id="status-option-input" placeholder="Novo status">
+                                        <button type="button" class="btn btn-view" data-add-option="status">Adicionar</button>
+                                    </div>
+                                </div>
+                                <div class="option-list" id="status-option-list"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-view btn-save-options">Salvar opções</button>
                 </div>
             </section>
             <div class="settings-toast" id="settings-toast" role="status" aria-live="polite"></div>

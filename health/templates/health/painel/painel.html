@@ -52,6 +52,31 @@
             </section>
             {% endif %}
 
+            {% if is_admin %}
+            <section class="admin-data-tools">
+                <h3>Importação e Exportação de Funcionários</h3>
+                <p class="helper-text">
+                    Importe planilhas em .xlsx, .xls, .ods ou .csv. Você pode usar colunas como:
+                    nome, funcao, unidade, status_saude, afastamento_ativo, exame_status,
+                    acidentes_quantidade e atestados_json (lista JSON).
+                </p>
+                <form method="post" action="{% url 'health:importar-funcionarios-planilha' %}" enctype="multipart/form-data" class="import-form">
+                    {% csrf_token %}
+                    <input type="file" name="planilha" accept=".xlsx,.xls,.ods,.csv" required>
+                    <button class="btn btn-view" type="submit">Importar Planilha</button>
+                </form>
+                <form method="post" action="{% url 'health:importar-funcionarios-planilha' %}" class="import-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="use_default" value="1">
+                    <button class="btn" type="submit">Importar planilha (data-js)</button>
+                </form>
+                <div class="export-actions">
+                    <a class="btn" href="{% url 'health:exportar-funcionarios-json' %}">Exportar JSON</a>
+                    <a class="btn" href="{% url 'health:exportar-funcionarios-xml' %}">Exportar XML</a>
+                </div>
+            </section>
+            {% endif %}
+
             <section class="layout-controls">
                 <button class="btn {% if layout.modo_visualizacao == 'cards' %}btn-view{% endif %}" data-view-mode="cards">Modo Cards</button>
                 <button class="btn {% if layout.modo_visualizacao == 'grid' %}btn-view{% endif %}" data-view-mode="grid">Modo Grade</button>

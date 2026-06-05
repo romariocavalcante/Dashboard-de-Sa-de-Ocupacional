@@ -1,10 +1,16 @@
+import csv
+import io
 import json
+import unicodedata
 from datetime import datetime
 from collections import Counter, defaultdict
+from pathlib import Path
+from xml.etree.ElementTree import Element, SubElement, tostring
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -35,6 +41,54 @@ MODULE_REGISTRY = [
 	("accidents", "Acidentes e CAT", "Monitoramento de segurança, gravidade e registro de acidentes."),
 	("absenteeism_health", "Absenteísmo e Saúde dos Colaboradores", "Saúde ocupacional ampliada, absenteísmo e alertas preventivos."),
 ]
+
+SUPPORTED_SPREADSHEET_EXTENSIONS = {".xlsx", ".xls", ".ods", ".csv"}
+
+TRUE_VALUES = {"1", "true", "sim", "yes", "y", "x", "on"}
+
+IMPORT_COLUMN_ALIASES = {
+	"nome": "nome",
+	"funcionario": "nome",
+	"nome_funcionario": "nome",
+	"chapa": "chapa",
+	"cargo": "funcao",
+	"funcao": "funcao",
+	"setor": "secao",
+	"departamento": "secao",
+	"secao": "secao",
+	"unidade": "unidade",
+	"filial": "unidade",
+	"status_saude": "status_saude",
+	"status": "status_saude",
+	"afastamento_ativo": "afastamento_ativo",
+	"data_afastamento": "data_afastamento",
+	"previsao_retorno": "previsao_retorno",
+	"exame_status": "exame_status",
+	"status_exame": "exame_status",
+	"proximo_periodico": "proximo_periodico",
+	"exame_realizado_no_mes": "exame_realizado_no_mes",
+	"acidentes_quantidade": "acidentes_quantidade",
+	"quantidade_acidentes": "acidentes_quantidade",
+	"ultimo_tipo": "ultimo_tipo",
+	"tipo_acidente": "ultimo_tipo",
+	"data_ultimo_acidente": "data_ultimo_acidente",
+	"cid": "cid",
+	"motivo": "motivo",
+	"dt_inicio": "dt_inicio",
+	"dt_final": "dt_final",
+	"dias_afastados": "dias_afastados",
+	"dias_af": "dias_afastados",
+	"area": "area",
+	"area_code": "area_code",
+	"rotulos_de_linha": "nome",
+	"contagem_de_nome": "qtd_atestados",
+	"qtd_atestados": "qtd_atestados",
+	"atestados_json": "atestados_json",
+	"payload_json": "payload_json",
+	"ativo": "ativo",
+	"ordem": "ordem",
+	"id": "id",
+}
 
 
 def calculate_absenteeism_from_atestados(atestados):
@@ -69,8 +123,13 @@ def normalize_employee_payload(employee_payload):
 
 
 def get_active_employee_payloads():
-	raw_payloads = EmployeeRecord.objects.filter(ativo=True).values_list("payload", flat=True)
-	return [normalize_employee_payload(payload) for payload in raw_payloads]
+	records = EmployeeRecord.objects.filter(ativo=True).order_by("ordem", "id")
+	result = []
+	for record in records:
+		payload = normalize_employee_payload(record.payload if isinstance(record.payload, dict) else {})
+		payload["id"] = record.id
+		result.append(payload)
+	return result
 
 
 def _parse_iso_date(value):
@@ -233,7 +292,7 @@ def _build_dashboard_facts(employee_payloads, dashboard_stats):
 
 	for employee in employee_payloads:
 		nome = employee.get("nome", "Colaborador")
-		setor = employee.get("setor") or "Sem setor"
+		setor = employee.get("secao") or employee.get("setor") or "Sem secao"
 		unidade = employee.get("unidade") or "Sem unidade"
 		saude = employee.get("saudeOcupacional", {}) or {}
 		afastamento = saude.get("afastamentoINSS", {}) or {}
@@ -296,7 +355,7 @@ def _build_dashboard_facts(employee_payloads, dashboard_stats):
 
 	risco_setor_score = Counter()
 	for employee in employee_payloads:
-		setor = employee.get("setor") or "Sem setor"
+		setor = employee.get("secao") or employee.get("setor") or "Sem secao"
 		status = (employee.get("saudeOcupacional", {}) or {}).get("status")
 		if status == "high":
 			risco_setor_score[setor] += 3
@@ -604,6 +663,383 @@ def build_atestados_from_post(post_data):
 	return atestados
 
 
+def _normalize_column_name(value):
+	text = str(value or "").strip().lower()
+	text = "".join(
+		char for char in unicodedata.normalize("NFKD", text)
+		if not unicodedata.combining(char)
+	)
+	return text.replace(" ", "_").replace("-", "_").replace(".", "_")
+
+
+def _normalize_employee_key(value):
+	text = _safe_text(value)
+	if not text:
+		return ""
+	text = "".join(
+		char for char in unicodedata.normalize("NFKD", text)
+		if not unicodedata.combining(char)
+	)
+	return text.lower().strip()
+
+
+def _safe_text(value):
+	if value is None:
+		return ""
+	text = str(value).strip()
+	if text.lower() in {"nan", "nat", "none", "null"}:
+		return ""
+	return text
+
+
+def _to_bool(value):
+	if isinstance(value, bool):
+		return value
+	return _safe_text(value).lower() in TRUE_VALUES
+
+
+def _to_optional_int(value):
+	text = _safe_text(value)
+	if not text:
+		return None
+
+	if text.isdigit() or (text.startswith("-") and text[1:].isdigit()):
+		return int(text)
+
+	try:
+		return int(float(text))
+	except (TypeError, ValueError):
+		return None
+
+
+def _to_iso_date(value):
+	if hasattr(value, "strftime"):
+		return value.strftime("%Y-%m-%d")
+
+	text = _safe_text(value)
+	if not text:
+		return None
+
+	for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+		try:
+			return datetime.strptime(text, fmt).strftime("%Y-%m-%d")
+		except ValueError:
+			continue
+
+	return None
+
+
+def _rows_from_matrix(matrix_rows):
+	if not matrix_rows:
+		return []
+
+	headers = [str(cell).strip() if cell is not None else "" for cell in matrix_rows[0]]
+	rows = []
+	for data_row in matrix_rows[1:]:
+		if not any(cell not in (None, "") for cell in data_row):
+			continue
+		row_data = {}
+		for index, header in enumerate(headers):
+			cell_value = data_row[index] if index < len(data_row) else ""
+			if not header:
+				if cell_value and "area_code" not in row_data:
+					row_data["area_code"] = cell_value
+				continue
+			row_data[header] = cell_value
+		rows.append(row_data)
+	return rows
+
+
+def _read_employee_spreadsheet(uploaded_file):
+	suffix = Path(uploaded_file.name).suffix.lower()
+	if suffix not in SUPPORTED_SPREADSHEET_EXTENSIONS:
+		raise ValueError("Formato não suportado. Envie .xlsx, .xls, .ods ou .csv.")
+
+	uploaded_file.seek(0)
+
+	if suffix == ".csv":
+		content = uploaded_file.read()
+		decoded = content.decode("utf-8-sig")
+		reader = csv.DictReader(io.StringIO(decoded))
+		return [dict(row) for row in reader]
+
+	if suffix == ".xlsx":
+		try:
+			from openpyxl import load_workbook
+		except ImportError as exc:
+			raise RuntimeError("Dependência ausente: openpyxl.") from exc
+
+		workbook = load_workbook(uploaded_file, read_only=True, data_only=True)
+		sheet_map = { _normalize_column_name(name): name for name in workbook.sheetnames }
+		rows = []
+
+		primary_sheet_name = sheet_map.get(_normalize_column_name("PLANILHA"))
+		if primary_sheet_name:
+			sheet = workbook[primary_sheet_name]
+			matrix_rows = [list(row) for row in sheet.iter_rows(values_only=True)]
+			rows.extend(_rows_from_matrix(matrix_rows))
+		else:
+			sheet = workbook.active
+			matrix_rows = [list(row) for row in sheet.iter_rows(values_only=True)]
+			rows.extend(_rows_from_matrix(matrix_rows))
+
+		pivot_sheet_name = sheet_map.get(_normalize_column_name("QNT ATESTADO POR FUNCIONARIO"))
+		if pivot_sheet_name:
+			sheet = workbook[pivot_sheet_name]
+			matrix_rows = [list(row) for row in sheet.iter_rows(values_only=True)]
+			rows.extend(_rows_from_matrix(matrix_rows))
+
+		return rows
+
+	if suffix == ".xls":
+		try:
+			import xlrd
+		except ImportError as exc:
+			raise RuntimeError("Dependência ausente: xlrd.") from exc
+
+		content = uploaded_file.read()
+		workbook = xlrd.open_workbook(file_contents=content)
+		sheet = workbook.sheet_by_index(0)
+		matrix_rows = [sheet.row_values(row_idx) for row_idx in range(sheet.nrows)]
+		return _rows_from_matrix(matrix_rows)
+
+	try:
+		from odf import teletype
+		from odf.opendocument import load
+		from odf.table import Table, TableCell, TableRow
+	except ImportError as exc:
+		raise RuntimeError("Dependência ausente: odfpy.") from exc
+
+	content = uploaded_file.read()
+	doc = load(io.BytesIO(content))
+	matrix_rows = []
+
+	for table in doc.spreadsheet.getElementsByType(Table):
+		for row in table.getElementsByType(TableRow):
+			row_values = []
+			for cell in row.getElementsByType(TableCell):
+				repeat_count = int(cell.getAttribute("numbercolumnsrepeated") or 1)
+				text_value = teletype.extractText(cell).strip()
+				for _ in range(repeat_count):
+					row_values.append(text_value)
+			if row_values:
+				matrix_rows.append(row_values)
+		if matrix_rows:
+			break
+
+	return _rows_from_matrix(matrix_rows)
+
+
+def _read_employee_spreadsheet_path(file_path):
+	suffix = Path(file_path).suffix.lower()
+	if suffix not in SUPPORTED_SPREADSHEET_EXTENSIONS:
+		raise ValueError("Formato não suportado. Envie .xlsx, .xls, .ods ou .csv.")
+
+	if suffix == ".csv":
+		content = Path(file_path).read_bytes()
+		decoded = content.decode("utf-8-sig")
+		reader = csv.DictReader(io.StringIO(decoded))
+		return [dict(row) for row in reader]
+
+	if suffix == ".xlsx":
+		from openpyxl import load_workbook
+		workbook = load_workbook(file_path, read_only=True, data_only=True)
+		sheet_map = { _normalize_column_name(name): name for name in workbook.sheetnames }
+		rows = []
+
+		primary_sheet_name = sheet_map.get(_normalize_column_name("PLANILHA"))
+		if primary_sheet_name:
+			sheet = workbook[primary_sheet_name]
+			matrix_rows = [list(row) for row in sheet.iter_rows(values_only=True)]
+			rows.extend(_rows_from_matrix(matrix_rows))
+		else:
+			sheet = workbook.active
+			matrix_rows = [list(row) for row in sheet.iter_rows(values_only=True)]
+			rows.extend(_rows_from_matrix(matrix_rows))
+
+		pivot_sheet_name = sheet_map.get(_normalize_column_name("QNT ATESTADO POR FUNCIONARIO"))
+		if pivot_sheet_name:
+			sheet = workbook[pivot_sheet_name]
+			matrix_rows = [list(row) for row in sheet.iter_rows(values_only=True)]
+			rows.extend(_rows_from_matrix(matrix_rows))
+
+		return rows
+
+	if suffix == ".xls":
+		import xlrd
+		workbook = xlrd.open_workbook(filename=str(file_path))
+		sheet = workbook.sheet_by_index(0)
+		matrix_rows = [sheet.row_values(row_idx) for row_idx in range(sheet.nrows)]
+		return _rows_from_matrix(matrix_rows)
+
+	from odf import teletype
+	from odf.opendocument import load
+	from odf.table import Table, TableCell, TableRow
+
+	doc = load(str(file_path))
+	matrix_rows = []
+	for table in doc.spreadsheet.getElementsByType(Table):
+		for row in table.getElementsByType(TableRow):
+			row_values = []
+			for cell in row.getElementsByType(TableCell):
+				repeat_count = int(cell.getAttribute("numbercolumnsrepeated") or 1)
+				text_value = teletype.extractText(cell).strip()
+				for _ in range(repeat_count):
+					row_values.append(text_value)
+			if row_values:
+				matrix_rows.append(row_values)
+		if matrix_rows:
+			break
+
+	return _rows_from_matrix(matrix_rows)
+
+
+def _canonicalize_row(raw_row):
+	parsed = {}
+	for key, value in raw_row.items():
+		normalized_key = _normalize_column_name(key)
+		canonical_key = IMPORT_COLUMN_ALIASES.get(normalized_key)
+		if canonical_key:
+			parsed[canonical_key] = value
+	return parsed
+
+
+def _parse_atestados_json(raw_value):
+	raw_text = _safe_text(raw_value)
+	if not raw_text:
+		return []
+
+	try:
+		parsed = json.loads(raw_text)
+	except json.JSONDecodeError as exc:
+		raise ValueError("Valor inválido em 'atestados_json'. Use uma lista JSON válida.") from exc
+
+	if not isinstance(parsed, list):
+		raise ValueError("A coluna 'atestados_json' precisa conter uma lista JSON.")
+
+	result = []
+	for atestado in parsed:
+		if not isinstance(atestado, dict):
+			continue
+
+		dias = _to_optional_int(atestado.get("dias"))
+		result.append({
+			"data": _to_iso_date(atestado.get("data")),
+			"cid": _safe_text(atestado.get("cid")),
+			"dias": dias if dias is not None else 0,
+			"motivo": _safe_text(atestado.get("motivo")),
+			"area": _safe_text(atestado.get("area")),
+		})
+
+	return result
+
+
+def _build_employee_payload_from_row(raw_row):
+	row = _canonicalize_row(raw_row)
+
+	payload_json_text = _safe_text(row.get("payload_json"))
+	if payload_json_text:
+		try:
+			parsed_payload = json.loads(payload_json_text)
+		except json.JSONDecodeError as exc:
+			raise ValueError("Valor inválido em 'payload_json'.") from exc
+
+		if not isinstance(parsed_payload, dict):
+			raise ValueError("A coluna 'payload_json' precisa conter um objeto JSON.")
+
+		return normalize_employee_payload(parsed_payload), row
+
+	atestados = _parse_atestados_json(row.get("atestados_json"))
+	dt_inicio = row.get("dt_inicio")
+	dt_final = row.get("dt_final")
+	dias_afastados = _to_optional_int(row.get("dias_afastados"))
+	row_cid = _safe_text(row.get("cid"))
+	row_qtd_atestados = _to_optional_int(row.get("qtd_atestados"))
+	if dt_inicio or dias_afastados is not None or row_cid:
+		motivo = _safe_text(row.get("motivo"))
+		area = _safe_text(row.get("area")) or _safe_text(row.get("area_code"))
+		atestados.append({
+			"data": _to_iso_date(dt_inicio),
+			"cid": row_cid,
+			"dias": dias_afastados if dias_afastados is not None else 0,
+			"motivo": motivo,
+			"area": area,
+		})
+	qtd_atestados = row_qtd_atestados if row_qtd_atestados is not None else None
+	saude = {
+		"status": _safe_text(row.get("status_saude")) or "low",
+		"afastamentoINSS": {
+			"ativo": _to_bool(row.get("afastamento_ativo")),
+			"dataAfastamento": _to_iso_date(row.get("data_afastamento")),
+			"previsaoRetorno": _to_iso_date(row.get("previsao_retorno")),
+		},
+		"exames": {
+			"status": _safe_text(row.get("exame_status")) or "em_dia",
+			"proximoPeriodico": _to_iso_date(row.get("proximo_periodico")),
+			"realizadoNoMes": _to_bool(row.get("exame_realizado_no_mes")),
+		},
+		"acidentes": {
+			"quantidadeAno": _to_optional_int(row.get("acidentes_quantidade")) or 0,
+			"ultimoTipo": _safe_text(row.get("ultimo_tipo")) or "Sem registro",
+			"dataUltimo": _to_iso_date(row.get("data_ultimo_acidente")),
+		},
+		"atestados": atestados,
+	}
+	payload = {
+		"chapa": _safe_text(row.get("chapa")),
+		"nome": _safe_text(row.get("nome")),
+		"funcao": _safe_text(row.get("funcao")) or _safe_text(row.get("cargo")),
+		"dt_inicio": _to_iso_date(dt_inicio),
+		"dt_final": _to_iso_date(dt_final),
+		"dias_afastados": dias_afastados if dias_afastados is not None else 0,
+		"motivo": _safe_text(row.get("motivo")),
+		"cid": row_cid,
+		"secao": _safe_text(row.get("secao")),
+		"qtd_atestados": qtd_atestados,
+		"saudeOcupacional": saude,
+	}
+	return normalize_employee_payload(payload), row
+
+
+def _xml_safe_tag(tag_name):
+	normalized = _normalize_column_name(tag_name)
+	return normalized if normalized else "campo"
+
+
+def _append_value_to_xml(parent, key, value):
+	tag_name = _xml_safe_tag(key)
+
+	if isinstance(value, dict):
+		node = SubElement(parent, tag_name)
+		for child_key, child_value in value.items():
+			_append_value_to_xml(node, child_key, child_value)
+		return
+
+	if isinstance(value, list):
+		node = SubElement(parent, tag_name)
+		for item in value:
+			_append_value_to_xml(node, "item", item)
+		return
+
+	node = SubElement(parent, tag_name)
+	node.text = "" if value is None else str(value)
+
+
+def _build_employees_xml(records):
+	root = Element("funcionarios")
+	for record in records:
+		emp = SubElement(root, "funcionario")
+		emp.set("id", str(record.id))
+		emp.set("ativo", "true" if record.ativo else "false")
+		emp.set("ordem", str(record.ordem))
+
+		payload = normalize_employee_payload(record.payload if isinstance(record.payload, dict) else {})
+		for key, value in payload.items():
+			_append_value_to_xml(emp, key, value)
+
+	return tostring(root, encoding="utf-8", xml_declaration=True)
+
+
 def dashboard(request):
 	hidden_dashboard_card_keys = set()
 	if request.user.is_authenticated:
@@ -638,6 +1074,65 @@ def funcionarios(request):
 
 
 @login_required
+@require_POST
+def adicionar_funcionario(request):
+	if not user_is_admin(request.user):
+		return HttpResponseForbidden("Somente administrador pode adicionar funcionários.")
+
+	nome = request.POST.get("nome", "").strip()
+	if not nome:
+		messages.error(request, "Informe o nome do funcionário.")
+		return redirect("health:funcionarios")
+
+	status = request.POST.get("status", "low")
+	if status not in {"low", "medium", "high"}:
+		status = "low"
+
+	payload = {
+		"nome": nome,
+		"funcao": request.POST.get("funcao", "").strip(),
+		"secao": request.POST.get("secao", "").strip(),
+		"unidade": request.POST.get("unidade", "").strip(),
+		"saudeOcupacional": {
+			"status": status,
+			"afastamentoINSS": {
+				"ativo": False,
+				"dataAfastamento": None,
+				"previsaoRetorno": None,
+			},
+			"exames": {
+				"status": "em_dia",
+				"proximoPeriodico": None,
+				"realizadoNoMes": False,
+			},
+			"acidentes": {
+				"quantidadeAno": 0,
+				"ultimoTipo": "Sem registro",
+				"dataUltimo": None,
+			},
+			"atestados": [],
+		},
+	}
+	payload = normalize_employee_payload(payload)
+	last_order = EmployeeRecord.objects.order_by("-ordem").values_list("ordem", flat=True).first() or 0
+	EmployeeRecord.objects.create(payload=payload, ativo=True, ordem=last_order + 1)
+	messages.success(request, "Funcionário adicionado com sucesso.")
+	return redirect("health:funcionarios")
+
+
+@login_required
+@require_POST
+def remover_funcionario(request, employee_id):
+	if not user_is_admin(request.user):
+		return HttpResponseForbidden("Somente administrador pode remover funcionários.")
+
+	record = get_object_or_404(EmployeeRecord, id=employee_id)
+	record.delete()
+	messages.success(request, "Funcionário removido.")
+	return redirect("health:funcionarios")
+
+
+@login_required
 def editar_funcionario(request, employee_id):
 	if not user_is_admin(request.user):
 		return HttpResponseForbidden("Somente administrador pode editar funcionários.")
@@ -657,8 +1152,8 @@ def editar_funcionario(request, employee_id):
 			messages.error(request, str(exc))
 		else:
 			payload["nome"] = request.POST.get("nome", "").strip()
-			payload["cargo"] = request.POST.get("cargo", "").strip()
-			payload["setor"] = request.POST.get("setor", "").strip()
+			payload["funcao"] = request.POST.get("funcao", "").strip()
+			payload["secao"] = request.POST.get("secao", "").strip()
 			saude["status"] = request.POST.get("status", "low")
 			saude["afastamentoINSS"] = {
 				"ativo": request.POST.get("afastamento_ativo") == "on",
@@ -772,6 +1267,169 @@ def painel_usuario(request):
 		"employees_payloads": get_active_employee_payloads(),
 	}
 	return render(request, "health/painel/painel.html", context)
+
+
+@login_required
+@require_POST
+def importar_funcionarios_planilha(request):
+	if not user_is_admin(request.user):
+		return HttpResponseForbidden("Somente administrador pode importar planilha.")
+
+	spreadsheet = request.FILES.get("planilha")
+	use_default = request.POST.get("use_default") == "1"
+	redirect_target = request.POST.get("next", "")
+	if not redirect_target.startswith("/"):
+		redirect_target = ""
+
+	if not spreadsheet and not use_default:
+		messages.error(request, "Selecione um arquivo de planilha para importar.")
+		return redirect(redirect_target or "health:painel")
+
+	try:
+		if use_default and not spreadsheet:
+			data_dir = Path(settings.BASE_DIR) / "health" / "static" / "health" / "data-js"
+			candidates = sorted(data_dir.glob("*.xlsx"))
+			if not candidates:
+				messages.error(request, "Nenhuma planilha .xlsx encontrada em data-js.")
+				return redirect(redirect_target or "health:painel")
+			planilha_path = None
+			for candidate in candidates:
+				if "controle" in candidate.name.lower():
+					planilha_path = candidate
+					break
+			if planilha_path is None:
+				planilha_path = candidates[0]
+			rows = _read_employee_spreadsheet_path(planilha_path)
+		else:
+			rows = _read_employee_spreadsheet(spreadsheet)
+	except (RuntimeError, ValueError) as exc:
+		messages.error(request, str(exc))
+		return redirect(redirect_target or "health:painel")
+	except Exception as exc:
+		messages.error(request, f"Falha ao processar planilha: {exc}")
+		return redirect(redirect_target or "health:painel")
+
+	created_count = 0
+	updated_count = 0
+	skipped_count = 0
+	row_errors = []
+	next_order = (EmployeeRecord.objects.order_by("-ordem").values_list("ordem", flat=True).first() or 0) + 1
+	grouped_payloads = {}
+	grouped_order = {}
+
+	def merge_payloads(base_payload, incoming_payload):
+		for key in ("chapa", "funcao", "secao"):
+			if not base_payload.get(key) and incoming_payload.get(key):
+				base_payload[key] = incoming_payload.get(key)
+
+		if base_payload.get("qtd_atestados") is None and incoming_payload.get("qtd_atestados") is not None:
+			base_payload["qtd_atestados"] = incoming_payload.get("qtd_atestados")
+
+		base_saude = base_payload.get("saudeOcupacional", {})
+		incoming_saude = incoming_payload.get("saudeOcupacional", {})
+		base_atestados = list(base_saude.get("atestados") or [])
+		incoming_atestados = list(incoming_saude.get("atestados") or [])
+		if incoming_atestados:
+			base_atestados.extend(incoming_atestados)
+			base_saude["atestados"] = base_atestados
+			base_saude["absenteismo"] = calculate_absenteeism_from_atestados(base_atestados)
+			base_payload["saudeOcupacional"] = base_saude
+
+		return base_payload
+
+	for index, raw_row in enumerate(rows, start=2):
+		try:
+			payload, row = _build_employee_payload_from_row(raw_row)
+		except ValueError as exc:
+			row_errors.append(f"Linha {index}: {exc}")
+			continue
+
+		if not payload.get("nome"):
+			skipped_count += 1
+			continue
+
+		record_id = _to_optional_int(row.get("id"))
+		ativo = _to_bool(row.get("ativo")) if _safe_text(row.get("ativo")) else True
+		ordem = _to_optional_int(row.get("ordem"))
+
+		if record_id:
+			updated = EmployeeRecord.objects.filter(id=record_id).update(
+				payload=payload,
+				ativo=ativo,
+				ordem=ordem if ordem is not None else next_order,
+			)
+			if updated:
+				updated_count += 1
+				if ordem is None:
+					next_order += 1
+				continue
+
+		key = _normalize_employee_key(payload.get("nome"))
+		if key in grouped_payloads:
+			grouped_payloads[key] = merge_payloads(grouped_payloads[key], payload)
+			continue
+
+		grouped_payloads[key] = payload
+		grouped_order[key] = ordem
+
+	if grouped_payloads:
+		for key, payload in grouped_payloads.items():
+			ordem = grouped_order.get(key)
+			EmployeeRecord.objects.create(
+				payload=payload,
+				ativo=True,
+				ordem=ordem if ordem is not None else next_order,
+			)
+			created_count += 1
+			if ordem is None:
+				next_order += 1
+
+	if created_count or updated_count:
+		messages.success(
+			request,
+			f"Importação concluída. Criados: {created_count}, atualizados: {updated_count}, ignorados: {skipped_count}.",
+		)
+	else:
+		messages.warning(request, "Nenhum funcionário foi importado. Verifique as colunas da planilha.")
+
+	if row_errors:
+		messages.warning(request, "Ocorreram erros em algumas linhas: " + " | ".join(row_errors[:3]))
+
+	return redirect(redirect_target or "health:painel")
+
+
+@login_required
+def exportar_funcionarios_json(request):
+	if not user_is_admin(request.user):
+		return HttpResponseForbidden("Somente administrador pode exportar dados.")
+
+	records = EmployeeRecord.objects.all().order_by("ordem", "id")
+	data = []
+	for record in records:
+		payload = normalize_employee_payload(record.payload if isinstance(record.payload, dict) else {})
+		data.append({
+			"id": record.id,
+			"ativo": record.ativo,
+			"ordem": record.ordem,
+			"payload": payload,
+		})
+
+	content = json.dumps(data, ensure_ascii=False, indent=2)
+	response = HttpResponse(content, content_type="application/json; charset=utf-8")
+	response["Content-Disposition"] = 'attachment; filename="funcionarios.json"'
+	return response
+
+
+@login_required
+def exportar_funcionarios_xml(request):
+	if not user_is_admin(request.user):
+		return HttpResponseForbidden("Somente administrador pode exportar dados.")
+
+	records = EmployeeRecord.objects.all().order_by("ordem", "id")
+	xml_content = _build_employees_xml(records)
+	response = HttpResponse(xml_content, content_type="application/xml; charset=utf-8")
+	response["Content-Disposition"] = 'attachment; filename="funcionarios.xml"'
+	return response
 
 
 @login_required
